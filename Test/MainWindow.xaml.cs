@@ -1,26 +1,16 @@
 ﻿using Microsoft.Win32;
+using System.Diagnostics;
 using System.IO;
 using System.Numerics;
-using System.Reflection;
-using System.Security.Cryptography.Xml;
-using System.Text;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Effects;
-using System.Windows.Media.Imaging;
-using System.Windows.Media.Media3D;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
+using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
-using System.Net.Sockets;
-using System.Diagnostics;
-using System.ComponentModel;
-using System.Runtime.InteropServices;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Shapes;
 
 namespace Test
 {
@@ -31,6 +21,12 @@ namespace Test
         private PreviewWindow? previewWindow;
         private int[] mouseXY = new int[2];
         private BitmapSource? templateSource;
+        [DllImport("NativeImageProcessing.dll", CallingConvention = CallingConvention.Cdecl)]
+        private static extern long CalculateSSD_SSE2CPP(byte[] originalGray, byte[] templateGray, int originalStartIndex, int templateStartIndex, int length);
+        [DllImport("NativeImageProcessing.dll", CallingConvention = CallingConvention.Cdecl)]
+        private static extern long CalculateTemplateSSD_SSE2CPP(byte[] originalGray, byte[] templateGray, int originalWidth, int templateWidth, int templateHeight, int x, int y, long bestscore);
+        [DllImport("NativeImageProcessing.dll", CallingConvention = CallingConvention.Cdecl)]
+        private static extern long FindBestMatch_SSE2CPP(byte[] originalGray, byte[] templateGray, int originalWidth, int originalHeight, int templateWidth, int templateHeight, out int bestX, out int bestY);
         public MainWindow()
         {
             InitializeComponent();
@@ -64,7 +60,7 @@ namespace Test
                 return;
             }
             SaveFileDialog dialog = new SaveFileDialog();
-            dialog.DefaultExt= ".png";
+            dialog.DefaultExt = ".png";
             if (dialog.ShowDialog() == true)
             {
                 using (FileStream stream = new FileStream(dialog.FileName, FileMode.Create))
@@ -169,9 +165,9 @@ namespace Test
         }
         private void ResultImage_MouseLeave(object sender, MouseEventArgs e)
         {
-            if(previewWindow != null && previewWindow.IsVisible)
+            if (previewWindow != null && previewWindow.IsVisible)
             {
-                if(ResultImage.Source != null)
+                if (ResultImage.Source != null)
                 {
                     previewWindow.SetPreviewImage(ResultImage.Source);
                     previewWindow.Title = "PreviewWindow";
@@ -253,7 +249,7 @@ namespace Test
                     smoothedPixels[index] = (byte)(sumB / 9);
                     smoothedPixels[index + 1] = (byte)(sumG / 9);
                     smoothedPixels[index + 2] = (byte)(sumR / 9);
-                    
+
                 }
             }
             WriteableBitmap smoothedImage = new WriteableBitmap(width, height, converted.DpiX, converted.DpiY, PixelFormats.Bgra32, null);
@@ -307,7 +303,7 @@ namespace Test
                     gaussianPixels[index] = (byte)(sumB / kernelSum);
                     gaussianPixels[index + 1] = (byte)(sumG / kernelSum);
                     gaussianPixels[index + 2] = (byte)(sumR / kernelSum);
-                    
+
                 }
             }
             WriteableBitmap gaussianImage = new WriteableBitmap(width, height, gaussian.DpiX, gaussian.DpiY, PixelFormats.Bgra32, null);
@@ -353,7 +349,7 @@ namespace Test
                             int neighborIndex = (y + ky) * stride + (x + kx) * 4;
                             sumB += pixels[neighborIndex] * weight;
                             sumG += pixels[neighborIndex + 1] * weight;
-                            sumR += pixels[neighborIndex + 2] * weight;                                                        
+                            sumR += pixels[neighborIndex + 2] * weight;
                         }
                     }
                     sumB = Math.Clamp(sumB, 0, 255);
@@ -500,7 +496,7 @@ namespace Test
             int width = converted.PixelWidth;
             int height = converted.PixelHeight;
             int fftwidth = GetNextPowerOfTwo(width);
-            int fftheight = GetNextPowerOfTwo(height);  
+            int fftheight = GetNextPowerOfTwo(height);
             int bytesPerPixel = 4;
             int stride = width * bytesPerPixel;
             int fftstride = fftwidth * 4;
@@ -509,14 +505,14 @@ namespace Test
             double[,] magnitude = new double[fftheight, fftwidth];
             double max = 0;
             Complex[,] fftData = new Complex[fftheight, fftwidth];
-            
+
             converted.CopyPixels(pixels, stride, 0);
 
             for (int y = 0; y < height; y++)
             {
                 for (int x = 0; x < width; x++)
                 {
-                    
+
                     int index = y * stride + x * 4;
                     byte B = pixels[index];
                     byte G = pixels[index + 1];
@@ -525,19 +521,19 @@ namespace Test
                     pixels[index] = (byte)gray;
                     pixels[index + 1] = (byte)gray;
                     pixels[index + 2] = (byte)gray;
-                    fftData[y,x] = new Complex(gray, 0);
+                    fftData[y, x] = new Complex(gray, 0);
                 }
             }
             for (int y = 0; y < fftheight; y++)
             {
                 Complex[] row = new Complex[fftwidth];
-                
-                for(int x = 0; x < fftwidth; x++)
+
+                for (int x = 0; x < fftwidth; x++)
                 {
                     row[x] = fftData[y, x];
                 }
                 FFT1D(row);
-                for(int x = 0; x < fftwidth; x++)
+                for (int x = 0; x < fftwidth; x++)
                 {
                     fftData[y, x] = row[x];
                 }
@@ -547,12 +543,12 @@ namespace Test
             for (int x = 0; x < fftwidth; x++)
             {
                 Complex[] column = new Complex[fftheight];
-                for(int y = 0; y < fftheight; y++)
+                for (int y = 0; y < fftheight; y++)
                 {
                     column[y] = fftData[y, x];
                 }
                 FFT1D(column);
-                for(int y = 0; y < fftheight; y++)
+                for (int y = 0; y < fftheight; y++)
                 {
                     fftData[y, x] = column[y];
                 }
@@ -584,15 +580,15 @@ namespace Test
                 }
             }
             WriteableBitmap fftimage = new WriteableBitmap(fftwidth, fftheight, converted.DpiX, converted.DpiY, PixelFormats.Bgra32, null);
-            Int32Rect rect = new Int32Rect(0, 0, fftwidth,fftheight);
+            Int32Rect rect = new Int32Rect(0, 0, fftwidth, fftheight);
             fftimage.WritePixels(rect, fftPixels, fftstride, 0);
             ResultImage.Source = fftimage;
 
         }
-        
+
         private void TemplateButton_Click(object sender, EventArgs e)
         {
-            
+
             BitmapSource? source = OriginalImage.Source as BitmapSource;
             if (source == null)
             {
@@ -611,7 +607,7 @@ namespace Test
         }
         private void TemplateMatchingButton_Click(object sender, EventArgs e)
         {
-            
+
             if (templateSource == null)
             {
                 MessageBox.Show("템플릿 이미지를 먼저 선택하십시오.");
@@ -682,7 +678,6 @@ namespace Test
                 for (int x = 0; x <= originalWidth - templateWidth; x++)
                 {
                     long score = 0;
-                    bool stop = false;
                     for (int ty = 0; ty < templateHeight; ty++)
                     {
 
@@ -695,7 +690,6 @@ namespace Test
                             score += diffB * diffB;
                             if (score >= bestscore)
                             {
-                                stop = true;
                                 break;
                             }
                         }
@@ -707,7 +701,7 @@ namespace Test
                         }
                     }
                 }
-            }            
+            }
             stopwatch.Stop();
             for (int x = bestX; x < bestX + templateWidth; x++)
             {
@@ -733,12 +727,12 @@ namespace Test
                 resultpiexls[rightIndex] = 0;
                 resultpiexls[rightIndex + 1] = 0;
                 resultpiexls[rightIndex + 2] = 255;
-                resultpiexls[rightIndex + 3] = 255;   
+                resultpiexls[rightIndex + 3] = 255;
             }
             WriteableBitmap resultImage = new WriteableBitmap(originalWidth, originalHeight, orignalconverted.DpiX, orignalconverted.DpiY, PixelFormats.Bgra32, null);
             Int32Rect rect = new Int32Rect(0, 0, originalWidth, originalHeight);
             resultImage.WritePixels(rect, resultpiexls, originalStride, 0);
-            
+
             ResultImage.Source = resultImage;
             ResultScrollViewer.ScrollToHorizontalOffset(bestX * zoomScale);
             ResultScrollViewer.ScrollToVerticalOffset(bestY * zoomScale);
@@ -864,7 +858,7 @@ namespace Test
                 }
 
             }
-            for(; i < length; i++)
+            for (; i < length; i++)
             {
                 int diff = originalGray[originalStartIndex + i] - templateGray[templateStartIndex + i];
                 score += diff * diff;
@@ -873,8 +867,8 @@ namespace Test
 
             return score;
         }
-        
-        
+
+
         private void SSETemplateMatchingButton_Click(object sender, EventArgs e)
         {
             if (templateSource == null)
@@ -932,12 +926,12 @@ namespace Test
                     byte G = templatepixels[index + 1];
                     byte R = templatepixels[index + 2];
                     int gray = (B + G + R) / 3;
-                    int sseTemplateIndex = y * templateWidth + x ;
+                    int sseTemplateIndex = y * templateWidth + x;
                     sseTemplateGrayPixels[sseTemplateIndex] = (byte)gray;
 
                 }
             }
-         
+
             long bestscore = long.MaxValue;
             int bestX = 0;
             int bestY = 0;
@@ -947,7 +941,7 @@ namespace Test
             {
                 for (int x = 0; x <= originalWidth - templateWidth; x++)
                 {
-                    long score = CalcurateTemplateSSD_SSE2(sseGrayPixels, sseTemplateGrayPixels, originalWidth,templateWidth,templateHeight,x,y,bestscore);
+                    long score = CalcurateTemplateSSD_SSE2(sseGrayPixels, sseTemplateGrayPixels, originalWidth, templateWidth, templateHeight, x, y, bestscore);
                     /*
                     for (int ty = 0; ty < templateHeight; ty++)
                     {
@@ -1013,7 +1007,25 @@ namespace Test
 
                 score += CalcurateSSD_SSE2(originalGray, templateGray, originalStartIndex, templateStartIndex, templateWidth);
 
-                if(score >= bestscore)
+                if (score >= bestscore)
+                {
+                    break;
+                }
+            }
+
+            return score;
+        }
+        private long CalcurateTemplateSSD_SSE2_CPP(byte[] originalGray, byte[] templateGray, int originalWidth, int templateWidth, int templateHeight, int x, int y, long bestscore)
+        {
+            long score = 0;
+            for (int ty = 0; ty < templateHeight; ty++)
+            {
+                int originalStartIndex = (y + ty) * originalWidth + x;
+                int templateStartIndex = ty * templateWidth;
+
+                score += CalculateSSD_SSE2CPP(originalGray, templateGray, originalStartIndex, templateStartIndex, templateWidth);
+
+                if (score >= bestscore)
                 {
                     break;
                 }
@@ -1040,7 +1052,7 @@ namespace Test
             //byte[] originalGrey = MarkGrayPixels(source, out int originalWidth, out int originalHeight);
             //byte[] templateGrey = MarkGrayPixels(template, out int templateWidth, out int templateHeight);
 
-            double scale = 0.1;
+            double scale = 0.7;
             Stopwatch stopwatch = new Stopwatch();
             stopwatch.Start();
             BitmapSource smallOriginal = MakeSmallBitmap(source, scale);
@@ -1068,11 +1080,11 @@ namespace Test
             }
             int cropWidth = template.PixelWidth + searchRange * 2;
             int cropHeight = template.PixelHeight + searchRange * 2;
-            if(cropX + cropWidth > source.PixelWidth)
+            if (cropX + cropWidth > source.PixelWidth)
             {
                 cropWidth = source.PixelWidth - cropX;
             }
-            if(cropY + cropHeight > source.PixelHeight)
+            if (cropY + cropHeight > source.PixelHeight)
             {
                 cropHeight = source.PixelHeight - cropY;
             }
@@ -1085,11 +1097,12 @@ namespace Test
             int finalX = cropX + localbestX;
             int finalY = cropY + localbestY;
             ResultImage.Source = source;
-            DrawMatchRectangle(finalX, finalY, template.PixelWidth, template.PixelHeight);            
+            DrawMatchRectangle(finalX, finalY, template.PixelWidth, template.PixelHeight);
             stopwatch.Stop();
             ResultScrollViewer.ScrollToHorizontalOffset(finalX * zoomScale);
             ResultScrollViewer.ScrollToVerticalOffset(finalY * zoomScale);
             MessageBox.Show($"템플릿 매칭 시간: {stopwatch.ElapsedMilliseconds} ms\nrough: {roughX}, {roughY}\nfinal: {finalX}, {finalY}");
+
         }
         private byte[] MarkGrayPixels(BitmapSource source, out int width, out int height)
         {
@@ -1127,16 +1140,21 @@ namespace Test
         }
         private void FindBestMatch(byte[] originalGrey, int sourcewidth, int sourceheight, byte[] templateGrey, int templatewidth, int templateheight, out int bestX, out int bestY)
         {
+
+            FindBestMatch_SSE2CPP(originalGrey, templateGrey, sourcewidth, sourceheight, templatewidth, templateheight, out bestX, out bestY);
+             /*
             bestX = 0;
             bestY = 0;
             long bestscore = long.MaxValue;
-    
 
+            //long score = CalculateTemplateSSD_SSE2CPP(originalGrey, templateGrey, sourcewidth, templatewidth, templateheight, 0, 0, bestscore);
+            
             for (int y = 0; y <= sourceheight - templateheight; y++)
             {
                 for (int x = 0; x <= sourcewidth - templatewidth; x++)
                 {
                     long score = CalcurateTemplateSSD_SSE2(originalGrey, templateGrey, sourcewidth, templatewidth, templateheight, x, y, bestscore);
+                    //long score = CalcurateTemplateSSD_SSE2_CPP(originalGrey, templateGrey, sourcewidth, templatewidth, templateheight, x, y, bestscore);
 
                     if (score < bestscore)
                     {
@@ -1147,6 +1165,9 @@ namespace Test
                 }
 
             }
+            // */
+
+
         }
         private void DrawMatchRectangle(int x, int y, int width, int height)
         {
@@ -1157,7 +1178,7 @@ namespace Test
             rect.StrokeThickness = 3;
             rect.Fill = Brushes.Transparent;
             Canvas.SetLeft(rect, x);
-            Canvas.SetTop(rect, y); 
+            Canvas.SetTop(rect, y);
             ResultOverlay.Children.Add(rect);
         }
         private void Window_Closed(object sender, EventArgs e)
@@ -1168,9 +1189,8 @@ namespace Test
                 previewWindow = null;
             }
         }
-        [DllImport("NativeImageProcessing.dll")]
-        private static extern long CalculateSSD_SSE2CPP(byte[] originalGray, byte[] templateGray, int originalStartIndex, int templateStartIndex, int length);
-        private void DLLTestButoon_Click(object sender , RoutedEventArgs e)
+
+        private void DLLTestButoon_Click(object sender, RoutedEventArgs e)
         {
             int result = 0;
             MessageBox.Show($"DLL Test Result: {result}");
@@ -1184,7 +1204,7 @@ namespace Test
 
 
 
-    
+
 
 
 

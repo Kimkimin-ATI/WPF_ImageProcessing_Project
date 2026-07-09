@@ -57,7 +57,7 @@
                 <Button Content="샘플용 SSE 템플릿 매칭" Margin="5" Click="SSETemplateMatchingButton_Click"/>
                 <Button Content="실제 SSE 템플릿 매칭" Margin="5" Click="RealSSETemplateMatchingButton_Click"/> 
                 <Button Content="SSE 테스트" Margin="5" Click="SSETestButton_Click"/>
-                <Button Content="dll 테스트" Margin="5" Click="DLLTestButoon_Click"/>
+                <Button Content="dll SSE 템플릿 매칭" Margin="5" Click="DLLTestButoon_Click"/>
             </StackPanel>
             <Border Grid.Row="4" Height="90" Margin="5" BorderBrush="Gray" BorderThickness="1">
                 <Image x:Name="TemplatePreviewImage" Stretch="Uniform"/>

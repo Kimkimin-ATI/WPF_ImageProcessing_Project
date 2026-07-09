@@ -117,7 +117,7 @@
       <EnableUAC>false</EnableUAC>
     </Link>
     <PostBuildEvent>
-      <Command>copy /Y "$(TargetPath)" "C:\Users\김기민\source\repos\Test\bin\Debug\net9.0-windows\"</Command>
+      <Command>copy /Y "$(TargetPath)" "C:\Users\김기민\source\repos\WPF_ImageProcessing\Test\bin\$(Platform)\$(Configuration)\net9.0-windows\"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -137,7 +137,7 @@
       <EnableUAC>false</EnableUAC>
     </Link>
     <PostBuildEvent>
-      <Command>copy /Y "$(TargetPath)" "C:\Users\김기민\source\repos\Test\bin\Debug\net9.0-windows\"</Command>
+      <Command>copy /Y "$(TargetPath)" "C:\Users\김기민\source\repos\WPF_ImageProcessing\Test\bin\$(Platform)\$(Configuration)\net9.0-windows\"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>

@@ -1,6 +1,7 @@
 ﻿// dllmain.cpp : DLL 애플리케이션의 진입점을 정의합니다.
 #include "pch.h"
 #include <emmintrin.h>
+#include <climits>
 
 BOOL APIENTRY DllMain( HMODULE hModule,
                        DWORD  ul_reason_for_call,
@@ -72,4 +73,39 @@ extern "C" __declspec(dllexport) long long CalculateSSD_SSE2CPP(unsigned char* o
     
     return score;
 
+}
+
+extern "C" __declspec(dllexport) long long CalculateTemplateSSD_SSE2CPP(unsigned char* originalGray, unsigned char * templateGray, int originalWidth, int templateWidth, int templateHeight, int x, int y, long long bestscore) 
+{
+    long long score = 0;
+
+    for (int ty = 0; ty < templateHeight; ty++) {
+        int originalStartIndex = (y + ty) * originalWidth + x;
+        int templateStartIndex = ty * templateWidth;
+
+        score += CalculateSSD_SSE2CPP(originalGray, templateGray, originalStartIndex, templateStartIndex, templateWidth);
+
+        if (score >= bestscore) {
+            break;
+        }
+    }
+    return score;
+}
+
+extern "C" __declspec(dllexport) long long FindBestMatch_SSE2CPP(unsigned char* originalGray, unsigned char* templateGray, int sourceWidth, int sourceHeight, int templateWidth, int templateHeight, int* bestX, int* bestY) 
+{
+    long long bestscore = LLONG_MAX;
+     *bestX = 0;
+    *bestY = 0;
+    for (int y = 0; y <= sourceHeight - templateHeight; y++) {
+        for (int x = 0; x <= sourceWidth - templateWidth; x++) {
+            long long score = CalculateTemplateSSD_SSE2CPP(originalGray, templateGray, sourceWidth, templateWidth, templateHeight, x, y, bestscore);
+            if (score < bestscore) {
+                bestscore = score;
+                *bestX = x;
+                *bestY = y;
+            }
+        }
+    }
+    return bestscore;
 }
