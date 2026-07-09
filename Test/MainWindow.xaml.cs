@@ -588,7 +588,7 @@ namespace Test
 
         private void TemplateButton_Click(object sender, EventArgs e)
         {
-
+            ResultOverlay.Children.Clear();
             BitmapSource? source = OriginalImage.Source as BitmapSource;
             if (source == null)
             {
@@ -678,6 +678,7 @@ namespace Test
                 for (int x = 0; x <= originalWidth - templateWidth; x++)
                 {
                     long score = 0;
+                    bool stop = false;
                     for (int ty = 0; ty < templateHeight; ty++)
                     {
 
@@ -690,18 +691,24 @@ namespace Test
                             score += diffB * diffB;
                             if (score >= bestscore)
                             {
+                                stop = true;
                                 break;
                             }
                         }
+                            if (stop)
+                            {
+                                break;
+                            }
+                    }
                         if (score < bestscore)
                         {
                             bestscore = score;
                             bestX = x;
                             bestY = y;
                         }
-                    }
                 }
             }
+            
             stopwatch.Stop();
             for (int x = bestX; x < bestX + templateWidth; x++)
             {
@@ -869,8 +876,9 @@ namespace Test
         }
 
 
-        private void SSETemplateMatchingButton_Click(object sender, EventArgs e)
+        private void SSETemplateMatchingButton_Click(object sender, EventArgs e) //c# 함수(SSE)만 사용하는 템플릿 매칭
         {
+            ResultOverlay.Children.Clear();
             if (templateSource == null)
             {
                 MessageBox.Show("템플릿 이미지를 먼저 선택하십시오.");
@@ -882,118 +890,57 @@ namespace Test
                 MessageBox.Show("원본이미지를 먼저 여십시오.");
                 return;
             }
-            FormatConvertedBitmap orignalconverted = new FormatConvertedBitmap(source, PixelFormats.Bgra32, null, 0);
-            FormatConvertedBitmap templateconverted = new FormatConvertedBitmap(templateSource, PixelFormats.Bgra32, null, 0);
-            int originalWidth = orignalconverted.PixelWidth;
-            int originalHeight = orignalconverted.PixelHeight;
-            int templateWidth = templateconverted.PixelWidth;
-            int templateHeight = templateconverted.PixelHeight;
-            int bytesPerPixel = 4;
-            int originalStride = originalWidth * bytesPerPixel;
-            int templateStride = templateWidth * bytesPerPixel;
-            byte[] originalpixels = new byte[originalHeight * originalStride];
-            byte[] templatepixels = new byte[templateHeight * templateStride];
-            byte[] resultpiexls = new byte[originalHeight * originalStride];
-            byte[] sseGrayPixels = new byte[originalHeight * originalWidth];
-            byte[] sseTemplateGrayPixels = new byte[templateHeight * templateWidth];
-            orignalconverted.CopyPixels(originalpixels, originalStride, 0);
-            templateconverted.CopyPixels(templatepixels, templateStride, 0);
-            Array.Copy(originalpixels, resultpiexls, originalpixels.Length);
-            if (templateWidth > originalWidth || templateHeight > originalHeight)
-            {
-                MessageBox.Show("템플릿 이미지가 원본 이미지보다 큽니다.");
-                return;
-            }
-            for (int y = 0; y < originalHeight; y++)
-            {
-                for (int x = 0; x < originalWidth; x++)
-                {
-                    int index = y * originalStride + x * 4;
-                    byte B = originalpixels[index];
-                    byte G = originalpixels[index + 1];
-                    byte R = originalpixels[index + 2];
-                    int gray = (B + G + R) / 3;
-                    int ssegrayIndex = y * originalWidth + x;
-                    sseGrayPixels[ssegrayIndex] = (byte)gray;
-                }
-            }
-            for (int y = 0; y < templateHeight; y++)
-            {
-                for (int x = 0; x < templateWidth; x++)
-                {
-                    int index = y * templateStride + x * 4;
-                    byte B = templatepixels[index];
-                    byte G = templatepixels[index + 1];
-                    byte R = templatepixels[index + 2];
-                    int gray = (B + G + R) / 3;
-                    int sseTemplateIndex = y * templateWidth + x;
-                    sseTemplateGrayPixels[sseTemplateIndex] = (byte)gray;
+            BitmapSource? template = templateSource;
 
-                }
-            }
-
-            long bestscore = long.MaxValue;
-            int bestX = 0;
-            int bestY = 0;
+            double scale = 0.7;
             Stopwatch stopwatch = new Stopwatch();
             stopwatch.Start();
-            for (int y = 0; y <= originalHeight - templateHeight; y++)
+            BitmapSource smallOriginal = MakeSmallBitmap(source, scale);
+            BitmapSource smallTemplate = MakeSmallBitmap(template, scale);
+
+            byte[] smallOriginalGrey = MarkGrayPixels(smallOriginal, out int smallOriginalWidth, out int smallOriginalHeight);
+            byte[] smallTemplateGrey = MarkGrayPixels(smallTemplate, out int smallTemplateWidth, out int smallTemplateHeight);
+
+            FindBestMatch(smallOriginalGrey, smallOriginalWidth, smallOriginalHeight, smallTemplateGrey, smallTemplateWidth, smallTemplateHeight, out int smallbestX, out int smallbestY);
+
+            int roughX = (int)(smallbestX / scale);
+            int roughY = (int)(smallbestY / scale);
+
+            int searchRange = 300;
+            int cropX = roughX - searchRange;
+            int cropY = roughY - searchRange;
+            if (cropX < 0)
             {
-                for (int x = 0; x <= originalWidth - templateWidth; x++)
-                {
-                    long score = CalcurateTemplateSSD_SSE2(sseGrayPixels, sseTemplateGrayPixels, originalWidth, templateWidth, templateHeight, x, y, bestscore);
-                    /*
-                    for (int ty = 0; ty < templateHeight; ty++)
-                    {
-                        int originalStartIndex = (y + ty) * originalWidth + x;
-                        int templateStartIndex = ty * templateWidth;
-                        score += CalcurateSSD_SSE2(sseGrayPixels, sseTemplateGrayPixels, originalStartIndex, templateStartIndex, templateWidth);    
-                        if(score >= bestscore)
-                        {
-                            break;
-                        }
-                    }
-                    */
-                    if (score < bestscore)
-                    {
-                        bestscore = score;
-                        bestX = x;
-                        bestY = y;
-                    }
-                }
+                cropX = 0;
             }
+            if (cropY < 0)
+            {
+                cropY = 0;
+            }
+            int cropWidth = template.PixelWidth + searchRange * 2;
+            int cropHeight = template.PixelHeight + searchRange * 2;
+            if (cropX + cropWidth > source.PixelWidth)
+            {
+                cropWidth = source.PixelWidth - cropX;
+            }
+            if (cropY + cropHeight > source.PixelHeight)
+            {
+                cropHeight = source.PixelHeight - cropY;
+            }
+            Int32Rect cropRect = new Int32Rect(cropX, cropY, cropWidth, cropHeight);
+            CroppedBitmap croppedSource = new CroppedBitmap(source, cropRect);
+
+            byte[] cropGrey = MarkGrayPixels(croppedSource, out int cropWidth2, out int cropHeight2);
+            byte[] templateGrey = MarkGrayPixels(template, out int templateWidth, out int templateHeight);
+            CsharpFindBestMatch(cropGrey, cropWidth2, cropHeight2, templateGrey, templateWidth, templateHeight, out int localbestX, out int localbestY);
+            int finalX = cropX + localbestX;
+            int finalY = cropY + localbestY;
+            ResultImage.Source = source;
+            DrawMatchRectangle(finalX, finalY, template.PixelWidth, template.PixelHeight);
             stopwatch.Stop();
-            for (int x = bestX; x < bestX + templateWidth; x++)
-            {
-                int topIndex = bestY * originalStride + x * 4;
-                int bottomIndex = (bestY + templateHeight - 1) * originalStride + x * 4;
-                resultpiexls[topIndex] = 0;
-                resultpiexls[topIndex + 1] = 0;
-                resultpiexls[topIndex + 2] = 255;
-                resultpiexls[topIndex + 3] = 255;
-                resultpiexls[bottomIndex] = 0;
-                resultpiexls[bottomIndex + 1] = 0;
-                resultpiexls[bottomIndex + 2] = 255;
-                resultpiexls[bottomIndex + 3] = 255;
-            }
-            for (int y = bestY; y < bestY + templateHeight; y++)
-            {
-                int leftIndex = y * originalStride + bestX * 4;
-                int rightIndex = y * originalStride + (bestX + templateWidth - 1) * 4;
-                resultpiexls[leftIndex] = 0;
-                resultpiexls[leftIndex + 1] = 0;
-                resultpiexls[leftIndex + 2] = 255;
-                resultpiexls[leftIndex + 3] = 255;
-                resultpiexls[rightIndex] = 0;
-                resultpiexls[rightIndex + 1] = 0;
-                resultpiexls[rightIndex + 2] = 255;
-                resultpiexls[rightIndex + 3] = 255;
-            }
-            WriteableBitmap resultImage = new WriteableBitmap(originalWidth, originalHeight, orignalconverted.DpiX, orignalconverted.DpiY, PixelFormats.Bgra32, null);
-            Int32Rect rect = new Int32Rect(0, 0, originalWidth, originalHeight);
-            resultImage.WritePixels(rect, resultpiexls, originalStride, 0);
-            ResultImage.Source = resultImage;
-            MessageBox.Show($"템플릿 매칭 시간: {stopwatch.ElapsedMilliseconds} ms");
+            ResultScrollViewer.ScrollToHorizontalOffset(finalX * zoomScale);
+            ResultScrollViewer.ScrollToVerticalOffset(finalY * zoomScale);
+            MessageBox.Show($"템플릿 매칭 시간: {stopwatch.ElapsedMilliseconds} ms\nrough: {roughX}, {roughY}\nfinal: {finalX}, {finalY}");
         }
 
         private unsafe long CalcurateTemplateSSD_SSE2(byte[] originalGray, byte[] templateGray, int originalWidth, int templateWidth, int templateHeight, int x, int y, long bestscore)
@@ -1142,20 +1089,19 @@ namespace Test
         {
 
             FindBestMatch_SSE2CPP(originalGrey, templateGrey, sourcewidth, sourceheight, templatewidth, templateheight, out bestX, out bestY);
-             /*
+        }
+        private void CsharpFindBestMatch(byte[] originalGrey, int sourcewidth, int sourceheight, byte[] templateGrey, int templatewidth, int templateheight, out int bestX, out int bestY)
+        {
             bestX = 0;
             bestY = 0;
             long bestscore = long.MaxValue;
 
-            //long score = CalculateTemplateSSD_SSE2CPP(originalGrey, templateGrey, sourcewidth, templatewidth, templateheight, 0, 0, bestscore);
-            
             for (int y = 0; y <= sourceheight - templateheight; y++)
             {
                 for (int x = 0; x <= sourcewidth - templatewidth; x++)
                 {
                     long score = CalcurateTemplateSSD_SSE2(originalGrey, templateGrey, sourcewidth, templatewidth, templateheight, x, y, bestscore);
-                    //long score = CalcurateTemplateSSD_SSE2_CPP(originalGrey, templateGrey, sourcewidth, templatewidth, templateheight, x, y, bestscore);
-
+       
                     if (score < bestscore)
                     {
                         bestscore = score;
@@ -1165,9 +1111,6 @@ namespace Test
                 }
 
             }
-            // */
-
-
         }
         private void DrawMatchRectangle(int x, int y, int width, int height)
         {
@@ -1190,11 +1133,6 @@ namespace Test
             }
         }
 
-        private void DLLTestButoon_Click(object sender, RoutedEventArgs e)
-        {
-            int result = 0;
-            MessageBox.Show($"DLL Test Result: {result}");
-        }
         private void Button_Click(object sender, RoutedEventArgs e)
         {
 
