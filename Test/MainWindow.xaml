@@ -1,0 +1,69 @@
+﻿<Window x:Class="Test.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:Test"
+        mc:Ignorable="d"
+        WindowState="Maximized"
+        Title="MainWindow" Height="800" Width="1600"
+        Closed="Window_Closed"
+        >
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="120"/>
+        </Grid.ColumnDefinitions>
+        
+        <Border Grid.Column="0" BorderBrush="Gray" BorderThickness="1" Margin="5">
+            <Image x:Name="OriginalImage" Stretch="Uniform"/>
+        </Border>
+        
+        <ScrollViewer x:Name="ResultScrollViewer" Grid.Column="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+            <Border BorderBrush="Gray" BorderThickness="1" Margin="5">
+                <Grid x:Name="ResultImageLayer">
+                    <Image x:Name="ResultImage" Stretch="None" MouseMove="ResultImage_MouseMove" MouseLeave="ResultImage_MouseLeave"/>
+                    <Canvas x:Name="ResultOverlay" IsHitTestVisible="False"/>
+                </Grid>
+            </Border>
+        </ScrollViewer>
+        
+        <Grid Grid.Column ="2" Margin="5">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="80"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="50"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <StackPanel Grid.Row="0" Orientation="Vertical" Margin="5">
+                <Button Content="이미지 열기" Margin="5" Click="OpenButton_Click"/> 
+                <Button Content="이미지 저장" Margin="5" Click="SaveButton_Click"/>
+                <Button Content="확대" Margin="5" Click="zoomInButton_Click"/>
+                <Button Content="축소" Margin="5" Click="zoomOutButton_Click"/>
+                <Button Content="PreView" Margin="5" Click="PreviewButton_Click"/>
+                <Button Content="이진화" Margin="5" Click="BinarizationButton_Click"/>
+                <Button Content="평활화" Margin="5" Click="SmoothingButton_Click"/>
+            </StackPanel>
+            <StackPanel Grid.Row="2">
+                <Button Content="필터 가우스" Margin="5" Click="GaussianButton_Click"/>
+                <Button Content="필터 라플라스" Margin="5" Click="LaplaceButton_Click"/>
+                <Button Content="필터 Sobel" Margin="5" Click="SobelButton_Click"/>
+                <Button Content="필터 FFT" Margin="5" Click="FFTButton_Click"/>
+                <Button Content="템플릿 이미지" Margin="5" Click="TemplateButton_Click"/>
+                <Button Content="샘플용 템플릿 매칭" Margin="5" Click="TemplateMatchingButton_Click"/>
+                <Button Content="샘플용 SSE 템플릿 매칭" Margin="5" Click="SSETemplateMatchingButton_Click"/>
+                <Button Content="실제 SSE 템플릿 매칭" Margin="5" Click="RealSSETemplateMatchingButton_Click"/> 
+                <Button Content="SSE 테스트" Margin="5" Click="SSETestButton_Click"/>
+                <Button Content="dll 테스트" Margin="5" Click="DLLTestButoon_Click"/>
+            </StackPanel>
+            <Border Grid.Row="4" Height="90" Margin="5" BorderBrush="Gray" BorderThickness="1">
+                <Image x:Name="TemplatePreviewImage" Stretch="Uniform"/>
+            </Border>
+        </Grid>
+
+
+    </Grid>
+</Window>
