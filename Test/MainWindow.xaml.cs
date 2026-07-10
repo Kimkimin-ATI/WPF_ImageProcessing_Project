@@ -246,10 +246,34 @@ namespace Test
             ResultImage.Source = smoothedImage;
         }
 
+        private double[,] CreateGaussianKernel(int size, double sigma)
+        {
+            double[,] kernel = new double[size, size];
+            int radius = size / 2;
+            double sum = 0;
+
+            for(int y = -radius; y <= radius; y++)
+            {
+                for(int x = -radius; x <= radius; x++)
+                {
+                    double value = Math.Exp(-(x * x + y * y) / (2 * sigma * sigma)) / (2 * Math.PI * sigma * sigma);
+                    kernel[y + radius, x + radius] = value;
+                    sum += value;
+                }
+            }
+            for(int y = 0; y < size; y++)
+            {
+                for(int x = 0; x < size; x++)
+                {
+                    kernel[y, x] /= sum;
+                }
+            }
+            return kernel;
+        }
+
         private void GaussianButton_Click(object sender, EventArgs e)
         {
-            BitmapSource? source = ResultImage.Source as BitmapSource;
-            if (source == null)
+            if (ResultImage.Source is not BitmapSource source)
             {
                 MessageBox.Show("가우시안화할 이미지가 없습니다.");
                 return;
@@ -257,46 +281,59 @@ namespace Test
             FormatConvertedBitmap gaussian = new FormatConvertedBitmap(source, PixelFormats.Bgra32, null, 0);
             int width = gaussian.PixelWidth;
             int height = gaussian.PixelHeight;
-            int bytesPerPixel = 4;
+
+            const int bytesPerPixel = 4;
             int stride = width * bytesPerPixel;
+
             byte[] pixels = new byte[height * stride];
             gaussian.CopyPixels(pixels, stride, 0);
-            byte[] gaussianPixels = new byte[height * stride];
-            Array.Copy(pixels, gaussianPixels, pixels.Length);
-            int[,] kernel =
-            {
-                { 1, 2, 1 },
-                { 2, 4, 2 },
-                { 1, 2, 1 }
-            };
 
-            int kernelSum = 16;
-            for (int y = 1; y < height - 1; y++)
+            byte[] gaussianPixels = (byte[])pixels.Clone();
+
+            double[,] kernel = CreateGaussianKernel(5, 1.0);
+            int radius = kernel.GetLength(0) / 2;
+
+            for (int y = radius; y < height - radius; y++)
             {
-                for (int x = 1; x < width - 1; x++)
+                for (int x = radius; x < width - radius; x++)
                 {
-                    int index = y * stride + x * 4;
-                    int sumB = 0, sumG = 0, sumR = 0;
-                    for (int ky = -1; ky <= 1; ky++)
+                    double sumB = 0; double sumG = 0; double sumR = 0;
+
+                    for (int ky = -radius; ky <= radius; ky++)
                     {
-                        for (int kx = -1; kx <= 1; kx++)
+                        for (int kx = -radius; kx <= radius; kx++)
                         {
-                            int weight = kernel[ky + 1, kx + 1];
-                            int neighborIndex = (y + ky) * stride + (x + kx) * 4;
+                            double weight =
+                                kernel[ky + radius, kx + radius];
+
+                            int neighborIndex =
+                                (y + ky) * stride
+                                + (x + kx) * bytesPerPixel;
+
                             sumB += pixels[neighborIndex] * weight;
                             sumG += pixels[neighborIndex + 1] * weight;
                             sumR += pixels[neighborIndex + 2] * weight;
                         }
                     }
-                    gaussianPixels[index] = (byte)(sumB / kernelSum);
-                    gaussianPixels[index + 1] = (byte)(sumG / kernelSum);
-                    gaussianPixels[index + 2] = (byte)(sumR / kernelSum);
+                    int index = y * stride + x * bytesPerPixel;
+                    gaussianPixels[index] = ToByte(sumB);
+                    gaussianPixels[index + 1] = ToByte(sumG);
+                    gaussianPixels[index + 2] = ToByte(sumR);
                 }
             }
             WriteableBitmap gaussianImage = new WriteableBitmap(width, height, gaussian.DpiX, gaussian.DpiY, PixelFormats.Bgra32, null);
-            Int32Rect rect = new Int32Rect(0, 0, width, height);
-            gaussianImage.WritePixels(rect, gaussianPixels, stride, 0);
+
+            gaussianImage.WritePixels( new Int32Rect(0, 0, width, height), gaussianPixels, stride, 0);
+
             ResultImage.Source = gaussianImage;
+        }
+
+        private byte ToByte(double value)
+        {
+            value = Math.Round(value);
+            value = Math.Max(0, Math.Min(255, value));
+
+            return (byte)value;
         }
 
         private void LaplaceButton_Click(object sender, EventArgs e)
