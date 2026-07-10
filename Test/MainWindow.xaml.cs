@@ -14,7 +14,6 @@ using System.Windows.Shapes;
 
 namespace Test
 {
-
     public partial class MainWindow : Window
     {
         private double zoomScale = 1.0;
@@ -49,7 +48,6 @@ namespace Test
                 zoomScale = 1.0;
                 ResultImage.LayoutTransform = new ScaleTransform(zoomScale, zoomScale);
             }
-
         }
         private void SaveButton_Click(object sender, RoutedEventArgs e)
         {
@@ -74,14 +72,11 @@ namespace Test
 
         private void zoomInButton_Click(object sender, RoutedEventArgs e)
         {
-
             zoomScale += 0.1;
             ResultImageLayer.LayoutTransform = new ScaleTransform(zoomScale, zoomScale);
-
         }
         private void zoomOutButton_Click(object sender, RoutedEventArgs e)
         {
-
             if (zoomScale > 0.2)
             {
                 zoomScale -= 0.1;
@@ -91,7 +86,6 @@ namespace Test
             {
                 MessageBox.Show("더 이상 축소할 수 없습니다.");
             }
-
         }
         private void PreviewButton_Click(object sender, RoutedEventArgs e)
         {
@@ -157,11 +151,7 @@ namespace Test
                 CroppedBitmap cropped = new CroppedBitmap(source, rect);
 
                 previewWindow.SetPreviewImage(cropped);
-
-
-
             }
-
         }
         private void ResultImage_MouseLeave(object sender, MouseEventArgs e)
         {
@@ -171,7 +161,6 @@ namespace Test
                 {
                     previewWindow.SetPreviewImage(ResultImage.Source);
                     previewWindow.Title = "PreviewWindow";
-
                 }
             }
         }
@@ -249,7 +238,6 @@ namespace Test
                     smoothedPixels[index] = (byte)(sumB / 9);
                     smoothedPixels[index + 1] = (byte)(sumG / 9);
                     smoothedPixels[index + 2] = (byte)(sumR / 9);
-
                 }
             }
             WriteableBitmap smoothedImage = new WriteableBitmap(width, height, converted.DpiX, converted.DpiY, PixelFormats.Bgra32, null);
@@ -303,7 +291,6 @@ namespace Test
                     gaussianPixels[index] = (byte)(sumB / kernelSum);
                     gaussianPixels[index + 1] = (byte)(sumG / kernelSum);
                     gaussianPixels[index + 2] = (byte)(sumR / kernelSum);
-
                 }
             }
             WriteableBitmap gaussianImage = new WriteableBitmap(width, height, gaussian.DpiX, gaussian.DpiY, PixelFormats.Bgra32, null);
@@ -358,7 +345,6 @@ namespace Test
                     laplacePixels[index] = (byte)(sumB);
                     laplacePixels[index + 1] = (byte)(sumG);
                     laplacePixels[index + 2] = (byte)(sumR);
-
                 }
             }
             WriteableBitmap laplaceImage = new WriteableBitmap(width, height, laplace.DpiX, laplace.DpiY, PixelFormats.Bgra32, null);
@@ -471,7 +457,6 @@ namespace Test
                         buffer[i + j1 + len / 2] = u - v;
                         w *= wlen;
                     }
-
                 }
             }
         }
@@ -537,7 +522,6 @@ namespace Test
                 {
                     fftData[y, x] = row[x];
                 }
-
             }
 
             for (int x = 0; x < fftwidth; x++)
@@ -583,7 +567,6 @@ namespace Test
             Int32Rect rect = new Int32Rect(0, 0, fftwidth, fftheight);
             fftimage.WritePixels(rect, fftPixels, fftstride, 0);
             ResultImage.Source = fftimage;
-
         }
 
         private void TemplateButton_Click(object sender, EventArgs e)
@@ -870,8 +853,6 @@ namespace Test
                 int diff = originalGray[originalStartIndex + i] - templateGray[templateStartIndex + i];
                 score += diff * diff;
             }
-
-
             return score;
         }
 
@@ -959,7 +940,6 @@ namespace Test
                     break;
                 }
             }
-
             return score;
         }
         private long CalcurateTemplateSSD_SSE2_CPP(byte[] originalGray, byte[] templateGray, int originalWidth, int templateWidth, int templateHeight, int x, int y, long bestscore)
@@ -996,9 +976,6 @@ namespace Test
             }
             BitmapSource? template = templateSource;
 
-            //byte[] originalGrey = MarkGrayPixels(source, out int originalWidth, out int originalHeight);
-            //byte[] templateGrey = MarkGrayPixels(template, out int templateWidth, out int templateHeight);
-
             double scale = 0.7;
             Stopwatch stopwatch = new Stopwatch();
             stopwatch.Start();
@@ -1008,7 +985,6 @@ namespace Test
             byte[] smallOriginalGrey = MarkGrayPixels(smallOriginal, out int smallOriginalWidth, out int smallOriginalHeight);
             byte[] smallTemplateGrey = MarkGrayPixels(smallTemplate, out int smallTemplateWidth, out int smallTemplateHeight);
 
-            //MessageBox.Show($"원본 축소: {smallOriginalWidth} x {smallOriginalHeight}\n" +$"템플릿 축소: {smallTemplateWidth} x {smallTemplateHeight}");
             FindBestMatch(smallOriginalGrey, smallOriginalWidth, smallOriginalHeight, smallTemplateGrey, smallTemplateWidth, smallTemplateHeight, out int smallbestX, out int smallbestY);
 
             int roughX = (int)(smallbestX / scale);
@@ -1109,7 +1085,6 @@ namespace Test
                         bestY = y;
                     }
                 }
-
             }
         }
         private void DrawMatchRectangle(int x, int y, int width, int height)
@@ -1131,11 +1106,6 @@ namespace Test
                 previewWindow.Close();
                 previewWindow = null;
             }
-        }
-
-        private void Button_Click(object sender, RoutedEventArgs e)
-        {
-
         }
     }
 }
