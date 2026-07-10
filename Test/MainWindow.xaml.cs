@@ -335,6 +335,27 @@ namespace Test
 
             return (byte)value;
         }
+        private int CalcurateLaplacian(byte[] pixels, int x, int y, int channel, int stride)
+        {
+            const int bytesPerPixel = 4;
+
+            int center = y * stride + x * bytesPerPixel + channel;
+            int left = y * stride + (x - 1) * bytesPerPixel + channel;
+            int right = y * stride + (x + 1) * bytesPerPixel + channel;
+            int top = (y - 1) * stride + x * bytesPerPixel + channel;
+            int bottom = (y + 1) * stride + x * bytesPerPixel + channel;
+
+            int laplacian = pixels[left] - 2 * pixels[center] + pixels[right] + pixels[top] - 2 * pixels[center] + pixels[bottom];
+
+            return laplacian;
+        }
+        private byte LaplacianToByte(int value)
+        {
+            value = Math.Abs(value);
+            value = Math.Max(0, Math.Min(255, value));
+
+            return (byte)value;
+        }
 
         private void LaplaceButton_Click(object sender, EventArgs e)
         {
@@ -351,37 +372,20 @@ namespace Test
             int stride = width * bytesPerPixel;
             byte[] pixels = new byte[height * stride];
             laplace.CopyPixels(pixels, stride, 0);
-            byte[] laplacePixels = new byte[height * stride];
-            Array.Copy(pixels, laplacePixels, pixels.Length);
-            int[,] kernel =
-            {
-                { 0, -1, 0 },
-                { -1, 4, -1 },
-                { 0, -1, 0 }
-            };
+            byte[] laplacePixels = (byte[])pixels.Clone();
+            
             for (int y = 1; y < height - 1; y++)
             {
                 for (int x = 1; x < width - 1; x++)
                 {
                     int index = y * stride + x * 4;
-                    int sumB = 0, sumG = 0, sumR = 0;
-                    for (int ky = -1; ky <= 1; ky++)
-                    {
-                        for (int kx = -1; kx <= 1; kx++)
-                        {
-                            int weight = kernel[ky + 1, kx + 1];
-                            int neighborIndex = (y + ky) * stride + (x + kx) * 4;
-                            sumB += pixels[neighborIndex] * weight;
-                            sumG += pixels[neighborIndex + 1] * weight;
-                            sumR += pixels[neighborIndex + 2] * weight;
-                        }
-                    }
-                    sumB = Math.Clamp(sumB, 0, 255);
-                    sumG = Math.Clamp(sumG, 0, 255);
-                    sumR = Math.Clamp(sumR, 0, 255);
-                    laplacePixels[index] = (byte)(sumB);
-                    laplacePixels[index + 1] = (byte)(sumG);
-                    laplacePixels[index + 2] = (byte)(sumR);
+                    int sumB = CalcurateLaplacian(pixels, x, y, 0, stride);
+                    int sumG = CalcurateLaplacian(pixels, x, y, 1, stride);
+                    int sumR = CalcurateLaplacian(pixels, x, y, 2, stride);
+
+                    laplacePixels[index] = LaplacianToByte(sumB);
+                    laplacePixels[index + 1] = LaplacianToByte(sumG);
+                    laplacePixels[index + 2] = LaplacianToByte(sumR);
                 }
             }
             WriteableBitmap laplaceImage = new WriteableBitmap(width, height, laplace.DpiX, laplace.DpiY, PixelFormats.Bgra32, null);
