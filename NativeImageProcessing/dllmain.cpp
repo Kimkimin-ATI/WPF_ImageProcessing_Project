@@ -45,10 +45,10 @@ extern "C" __declspec(dllexport) long long CalculateSSD_SSE2CPP(unsigned char* o
 
         __m128i diffLow = _mm_sub_epi16(originallow, templatelow);
         __m128i diffHigh = _mm_sub_epi16(originalhigh, templatehigh);
-
+        /*
         __m128i squareLow = _mm_mullo_epi16(diffLow, diffLow);
         __m128i squareHigh = _mm_mullo_epi16(diffHigh, diffHigh);
-
+        */
 
         __m128i sumLow = _mm_madd_epi16(diffLow, diffLow);
         __m128i sumHigh = _mm_madd_epi16(diffHigh, diffHigh);
