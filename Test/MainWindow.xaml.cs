@@ -111,7 +111,6 @@ namespace Test
             Point position = e.GetPosition(ResultImage);
             mouseXY[0] = (int)position.X;
             mouseXY[1] = (int)position.Y;
-
             if (previewWindow != null && previewWindow.IsVisible)
             {
                 previewWindow.Title = $"X:{mouseXY[0]},Y:{mouseXY[1]}";
@@ -120,7 +119,7 @@ namespace Test
                 {
                     return;
                 }
-                int cropSize = 100;
+                int cropSize = 300;
                 int half = cropSize / 2;
 
                 int x = mouseXY[0] - half;
@@ -134,22 +133,16 @@ namespace Test
                 {
                     y = 0;
                 }
-
-
                 if (x + cropSize > source.PixelWidth)
                 {
                     x = source.PixelWidth - cropSize;
                 }
-
-
                 if (y + cropSize > source.PixelHeight)
                 {
                     y = source.PixelHeight - cropSize;
                 }
-
                 Int32Rect rect = new Int32Rect(x, y, cropSize, cropSize);
                 CroppedBitmap cropped = new CroppedBitmap(source, rect);
-
                 previewWindow.SetPreviewImage(cropped);
             }
         }
